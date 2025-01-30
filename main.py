@@ -7,13 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Input your API data to .env file
-api_id = os.getenv('API_ID')
-api_hash = os.getenv('API_HASH')
-bot_token = os.getenv('BOT_TOKEN')
- 
-print('API ID is: ', api_id)
-print('API_HASH is: ', api_hash)
-print('BOT TOKEN is: ', bot_token)
+api_id = int(os.getenv('API_ID'))
+api_hash = str(os.getenv('API_HASH')).strip("'")
+bot_token = str(os.getenv('BOT_TOKEN')).strip("'")
+
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
 @client.on(events.NewMessage(pattern='/all'))
@@ -58,6 +55,5 @@ async def help_command(event):
 async def bot_mention(event):
     if event.message.mentioned:
         await event.reply("You mentioned me! Use /all to mention all of participants. If you want to see all my functions, use /help")
-
 
 client.run_until_disconnected()
