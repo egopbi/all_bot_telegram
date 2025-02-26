@@ -1,8 +1,10 @@
-import asyncio
 import os
 
 from telethon import TelegramClient, events, utils
 from dotenv import load_dotenv
+
+from markets import markets_main, crypto, stocks, metals_sber, currencies
+
 
 load_dotenv()
 
@@ -47,9 +49,44 @@ async def help_command(event):
         "Available commands:\n"
         "/all - mention all group members\n"
         "/info - get information about the bot\n"
+        "/markets - get information about **Crypto, Stocks, Metals & Currencies**\n"
+        "/crypto - get information about **Crypto**\n"
+        "/stocks - get information about **Stocks**\n"
+        "/metals - get information about **Metals**\n"
+        "/currencies - get information about **Currencies**\n"
         "/help - list of commands"
     )
     await event.reply(help_text)
+
+@client.on(events.NewMessage(pattern='/markets'))
+async def markets(event):
+    text = await markets_main()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
+
+@client.on(events.NewMessage(pattern='/crypto'))
+async def crypto_market(event):
+    text = await crypto()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
+
+@client.on(events.NewMessage(pattern='/stocks'))
+async def stocks_market(event):
+    text = await stocks()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
+
+@client.on(events.NewMessage(pattern='/metals'))
+async def metals_market(event):
+    text = await metals_sber()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
+
+@client.on(events.NewMessage(pattern='/currencies'))
+async def curencies_market(event):
+    text = await currencies()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
 
 @client.on(events.NewMessage)
 async def bot_mention(event):
