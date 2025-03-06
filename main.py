@@ -1,6 +1,9 @@
 import os
 
 from telethon import TelegramClient, events, utils
+from telethon.tl.functions.bots import SetBotCommandsRequest, SetBotMenuButtonRequest
+from telethon.tl.types import BotCommand, BotCommandScopeDefault, BotMenuButtonCommands
+
 from dotenv import load_dotenv
 
 from markets import markets_main, crypto, stocks, metals_sber, currencies
@@ -8,16 +11,31 @@ from markets import markets_main, crypto, stocks, metals_sber, currencies
 
 load_dotenv()
 
-# Input your API data to .env file
 api_id = int(os.getenv('API_ID'))
 api_hash = str(os.getenv('API_HASH')).strip("'")
 bot_token = str(os.getenv('BOT_TOKEN')).strip("'")
 
 client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
+async def set_bot_commands():
+    commands = [
+        BotCommand(command="start", description="Start bot"),
+        BotCommand(command="markets", description="Prices for all markets"),
+        BotCommand(command="crypto", description="Prices for cryptocurrencies"),
+        BotCommand(command="stocks", description="Prices for stocks"),
+        BotCommand(command="metals", description="Prices for precious metals"),
+        BotCommand(command="currencies", description="Prices for currencies"),
+        BotCommand(command="help", description="Info about commands"),
+        BotCommand(command="info", description="Info about bot"),
+    ]
+
+    await client(SetBotCommandsRequest(scope=BotCommandScopeDefault(), lang_code='en', commands=commands))
+    await client(SetBotMenuButtonRequest(user_id='self', button=BotMenuButtonCommands()))
+
+
 @client.on(events.NewMessage(pattern='/all'))
 async def mention_all(event):
-    if event.is_group:  # Check that command was used in a group
+    if event.is_group: 
         chat = await event.get_chat()
         participants = await client.get_participants(chat)
 
@@ -25,11 +43,9 @@ async def mention_all(event):
 
         mentions = []
         for p in participants:
-            # Pass bots
             if not p.bot: 
                 mentions.append(f"[{utils.get_display_name(p)}](tg://user?id={p.id})")
 
-        # Split mentions for a few messages if more than max
         for i in range(0, len(mentions), max_mentions_per_message):
             await event.reply(' '.join(mentions[i:i + max_mentions_per_message]))
     else:
@@ -93,4 +109,7 @@ async def bot_mention(event):
     if event.message.mentioned:
         await event.reply("You mentioned me! Use /all to mention all of participants. If you want to see all my functions, use /help")
 
-client.run_until_disconnected()
+
+with client:
+    client.loop.run_until_complete(set_bot_commands())
+    client.run_until_disconnected()
