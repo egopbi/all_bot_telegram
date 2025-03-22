@@ -20,6 +20,7 @@ client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 async def set_bot_commands():
     commands = [
         BotCommand(command="start", description="Start bot"),
+        BotCommand(command="all", description="Mention all of participants"),
         BotCommand(command="markets", description="Prices for all markets"),
         BotCommand(command="crypto", description="Prices for cryptocurrencies"),
         BotCommand(command="stocks", description="Prices for stocks"),
