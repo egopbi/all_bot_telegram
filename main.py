@@ -6,7 +6,7 @@ from telethon.tl.types import BotCommand, BotCommandScopeDefault, BotMenuButtonC
 
 from dotenv import load_dotenv
 
-from markets import markets_main, crypto, stocks, metals_sber, currencies
+from markets import markets_main, crypto, stocks, stocks_rus, metals_sber, currencies
 
 
 load_dotenv()
@@ -24,6 +24,7 @@ async def set_bot_commands():
         BotCommand(command="markets", description="Prices for all markets"),
         BotCommand(command="crypto", description="Prices for cryptocurrencies"),
         BotCommand(command="stocks", description="Prices for stocks"),
+        BotCommand(command="rus_stocks", description="Prices for MOEX russian stocks"),
         BotCommand(command="metals", description="Prices for precious metals"),
         BotCommand(command="currencies", description="Prices for currencies"),
         BotCommand(command="help", description="Info about commands"),
@@ -69,6 +70,7 @@ async def help_command(event):
         "/markets - get information about **Crypto, Stocks, Metals & Currencies**\n"
         "/crypto - get information about **Crypto**\n"
         "/stocks - get information about **Stocks**\n"
+        "/rus_stocks - get information about **Russian Stocks**\n"
         "/metals - get information about **Metals**\n"
         "/currencies - get information about **Currencies**\n"
         "/help - list of commands"
@@ -93,16 +95,27 @@ async def stocks_market(event):
     text = str(text)
     await client.send_message(event.chat_id, text)
 
+@client.on(events.NewMessage(pattern='/rus_stocks'))
+async def rus_stocks(event):
+    text = await stocks_rus()
+    text = str(text)
+    await client.send_message(event.chat_id, text)
+
 @client.on(events.NewMessage(pattern='/metals'))
 async def metals_market(event):
     text = await metals_sber()
     text = str(text)
     await client.send_message(event.chat_id, text)
 
+# @client.on(events.NewMessage(pattern='/currencies'))
+# async def curencies_market(event):
+#     text = await currencies()
+#     text = str(text)
+#     await client.send_message(event.chat_id, text)
+    
 @client.on(events.NewMessage(pattern='/currencies'))
 async def curencies_market(event):
-    text = await currencies()
-    text = str(text)
+    text = "Function doesn't work yet, sorry"
     await client.send_message(event.chat_id, text)
 
 @client.on(events.NewMessage)

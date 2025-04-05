@@ -1,19 +1,26 @@
 import asyncio
+import json
+
 import aiohttp
 import cloudscraper
 from bs4 import BeautifulSoup
 
 url_crypto = 'https://www.tradingview.com/markets/cryptocurrencies/prices-all/'
 url_stocks = 'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/'
+url_stocks_rus = 'https://scanner.tradingview.com/russia/scan?label-product=markets-screener'
 url_sber_metal = 'https://www.sberbank.com/proxy/services/rates/public/actualIngots'
 url_yandex_currencies = 'https://yandex.ru/finance/currencies'
 
-async def fetch_data(url, params=None, headers=None, method='text'):
+async def fetch_data(url, params=None, data=None, headers=None, is_post=False, method='text'):
     if headers is None:
         scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
         headers = scraper.headers
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(url=url,params=params) as response:
+        if is_post:
+            async with session.post(url=url, data=data) as response:
+                    return await response.json()
+
+        async with session.get(url=url, params=params) as response:
             if method == 'text':
                 return await response.text()
             elif method == 'json':
@@ -76,6 +83,59 @@ async def stocks():
     return stocks_text
 
 
+async def stocks_rus():
+    scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+    headers = {
+        **scraper.headers,
+        "Accept": "application/json",
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Origin": "https://ru.tradingview.com",
+        "Referer": "https://ru.tradingview.com/",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+    
+    data = {
+        "columns": [
+            "close", 
+            "Perf.1M", 
+            "market_cap_basic", 
+            "fundamental_currency_code",
+            "logoid",
+            "name",
+            "change",
+        ],
+        "ignore_inknown_fields": False,
+        "options": {"lang":"ru"},
+        'preset': "volume_leaders",
+        "range": [0, 20],
+        "sort": {"nullsFirst": False, "sortBy": "market_cap_basic", "sortOrder": "desc"},
+    }
+
+    response = await fetch_data(
+        url_stocks_rus, 
+        data=json.dumps(data), 
+        headers=headers, 
+        is_post=True,
+        method='json',
+    )
+    stocks_list = response['data']
+    stocks_text = ('\n\n**RUSSIAN STOCKS MARKETS**\n\n')
+    for i in range(20):
+        ticker = stocks_list[i]['d'][5]
+        performance = round(stocks_list[i]['d'][6], 2)
+        if performance < 0:
+            pipa = "🔻"
+        else:
+            pipa = "🟢"
+        valute = stocks_list[i]['d'][3]
+        price = stocks_list[i]['d'][0]
+        name =  str(stocks_list[i]['d'][4])
+        market_cap = round(stocks_list[i]['d'][2] / 1000000000)
+        stocks_text+=(f"{pipa} — **${ticker}** ({name.upper()})- {price} ({performance}%) | 💰 {market_cap} **B** {valute}\n\n")
+    
+    return stocks_text
+
+
 async def metals_sber():
     metals = ("Ag", "Au", "Pt", "Pd")
 
@@ -90,12 +150,12 @@ async def metals_sber():
     metals_text = ('\n\n**METALS SBER INGOTS**\n\n')
 
     async def metal_info(metal):
-        id = metals_id[str(metal)]
+        m_id = metals_id[str(metal)]
         params = {
             "rateType": "PMR-1",
             "segType": "TRADITIONAL",
             "id": "38",
-            "isoCodes[]": id
+            "isoCodes[]": m_id
         }
         headers_metals = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
@@ -111,7 +171,7 @@ async def metals_sber():
             method='json'
             )
         
-        ratelist = response[id]["rateList"]
+        ratelist = response[m_id]["rateList"]
         price_sell = 0
         for offer in ratelist:
             if int(offer['mass']) == 100:
@@ -156,7 +216,7 @@ async def currencies():
 
 async def markets_main():
     tasks = []
-    functions = (crypto, stocks, metals_sber, currencies)
+    functions = (crypto, stocks, stocks_rus, metals_sber) #Currencies doesn't work yet
     for fun in functions:
         tasks.append(asyncio.create_task(fun()))
 
