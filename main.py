@@ -107,16 +107,12 @@ async def metals_market(event):
     text = str(text)
     await client.send_message(event.chat_id, text)
 
-# @client.on(events.NewMessage(pattern='/currencies'))
-# async def curencies_market(event):
-#     text = await currencies()
-#     text = str(text)
-#     await client.send_message(event.chat_id, text)
-    
 @client.on(events.NewMessage(pattern='/currencies'))
 async def curencies_market(event):
-    text = "Function doesn't work yet, sorry"
+    text = await currencies()
+    text = str(text)
     await client.send_message(event.chat_id, text)
+    
 
 @client.on(events.NewMessage)
 async def bot_mention(event):

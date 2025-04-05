@@ -9,7 +9,7 @@ url_crypto = 'https://www.tradingview.com/markets/cryptocurrencies/prices-all/'
 url_stocks = 'https://www.tradingview.com/markets/world-stocks/worlds-largest-companies/'
 url_stocks_rus = 'https://scanner.tradingview.com/russia/scan?label-product=markets-screener'
 url_sber_metal = 'https://www.sberbank.com/proxy/services/rates/public/actualIngots'
-url_yandex_currencies = 'https://yandex.ru/finance/currencies'
+url_currencies = 'https://ratestats.com/'
 
 async def fetch_data(url, params=None, data=None, headers=None, is_post=False, method='text'):
     if headers is None:
@@ -194,29 +194,40 @@ async def metals_sber():
 
 
 async def currencies():
-    response = await fetch_data(url_yandex_currencies)
-    bs_currencies = BeautifulSoup(response, 'html.parser')
-    currencies = bs_currencies.find_all('div', class_='FinanceItemsList-Item', role='listitem')
     cur_text = "\n\n**CURRENCIES MARKET**\n\n"
+    response = await fetch_data(url=url_currencies)
+    bs_currencies = BeautifulSoup(response, 'html.parser')
+    tickers_raw = bs_currencies.find_all('a', class_="b-rates__ticker-name b-rates__legend_small")
+    names = [ticker.text for ticker in tickers_raw]
 
-    for i in range(3):
-        cur = currencies[i]
-        ticker = cur.find('div', class_="FinanceItemsCard-Subtitle").text
-        price = cur.find('div', class_="FinanceItemsCard-RightTitle").text
-        performance = cur.find('div', class_="FinanceItemsCard-DeltaRelative").text
-        if "-" in performance or "−" in performance:
+    prices_block = bs_currencies.find('div', class_="row b-rates__item_highlighted b-rates_small-text")
+    prices_raw = prices_block.find_all('div', class_='b-rates__amount')
+    prices = [float(price.find('span').text.replace(",", '.')).__round__(2) for price in prices_raw]
+
+    periods = bs_currencies.find_all('div', class_= "row b-rates__item")
+    m_period = periods[2]
+    performances_raw = m_period.find_all('div', class_='b-rates__amount')
+    performances = [float(
+        per.find('div', class_="b-rates__delta")
+        .text
+        .replace(",", ".")
+    ).__round__(2)*-1 for per in performances_raw]
+
+    for cur in zip(names, prices, performances):
+        name, price, performance = cur[0], cur[1], cur[2]
+        if performance < 0:
             pipa = "🔻"
         else:
             pipa = "🟢"
 
-        cur_text += (f'{pipa} — **{ticker}** — {price} ({performance} month)\n\n')
+        cur_text += (f'{pipa} — **{name.upper()}** — {price} ₽ ({performance}% month)\n\n')
     
     return cur_text
 
 
 async def markets_main():
     tasks = []
-    functions = (crypto, stocks, stocks_rus, metals_sber) #Currencies doesn't work yet
+    functions = (crypto, stocks, stocks_rus, metals_sber, currencies)
     for fun in functions:
         tasks.append(asyncio.create_task(fun()))
 
